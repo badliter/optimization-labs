@@ -5,6 +5,7 @@ import org.asynchttpclient.Response;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -111,6 +112,7 @@ public class Lab1Controller {
     }
 
     @GetMapping("/weather")
+    @Cacheable("temperatures")
     public List<Double> getWeatherForPeriod(Integer days) {
         try {
             return getTemperatureForLastDays(days);
@@ -122,16 +124,23 @@ public class Lab1Controller {
 
     public List<Double> getTemperatureForLastDays(int days) throws JSONException {
         List<Double> temps = new ArrayList<>();
+        // вынес из цикла
+        Long currentDayInSec = Calendar.getInstance().getTimeInMillis() / 1000;
+        Long oneDayInSec = 24 * 60 * 60L;
 
         for (int i = 0; i < days; i++) {
-            Long currentDayInSec = Calendar.getInstance().getTimeInMillis() / 1000;
-            Long oneDayInSec = 24 * 60 * 60L;
             Long curDateSec = currentDayInSec - i * oneDayInSec;
             Double curTemp = getTemperatureFromInfo(curDateSec.toString());
             temps.add(curTemp);
         }
 
         return temps;
+    }
+
+    public Double getTemperatureFromInfo(String date) throws JSONException {
+        String info = getTodayWeather(date);
+        Double curTemp = getTemperature(info);
+        return curTemp;
     }
 
     public String getTodayWeather(String date) {
@@ -144,14 +153,10 @@ public class Lab1Controller {
         System.out.println(fooResourceUrl);
         ResponseEntity<String> response = restTemplate.getForEntity(fooResourceUrl, String.class);
         String info = response.getBody();
+
+
         System.out.println(info);
         return info;
-    }
-
-    public Double getTemperatureFromInfo(String date) throws JSONException {
-        String info = getTodayWeather(date);
-        Double curTemp = getTemperature(info);
-        return curTemp;
     }
 
     public Double getTemperature(String info) throws JSONException {
